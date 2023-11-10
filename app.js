@@ -7,7 +7,6 @@ const studentRoutes = require('./routes/studentRoutes');
 app.use(express.json());
 
 app.use('/api', studentRoutes);
-// Outras rotas podem ser configuradas aqui
 
 const PORT = process.env.PORT || 3000;
 
