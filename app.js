@@ -1,3 +1,4 @@
+// Fazendo conexão com o banco de dados
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Pool } = require('pg');
@@ -9,10 +10,19 @@ const pool = new Pool({
     user: 'postgres',
     host: 'localhost',
     port: 5432, // Porta padrão do PostgreSQL
-    password: '0701'
+    password: '0701' // Aqui coloca a senha que você cadastrou quando instalou o postgres
 });
 
 app.use(bodyParser.json());
+
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://127.0.0.1:5500');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
+/////////////////////////////////////////////////////////////////////
 
 // Rota para cadastrar aluno
 app.post('/alunos', async (req, res) => {
@@ -22,25 +32,56 @@ app.post('/alunos', async (req, res) => {
             'INSERT INTO alunos (nome, data_nascimento, foto, endereco, telefone, email, senha) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
             [nome, data_nascimento, foto, endereco, telefone, email, senha]
         );
-        res.json(result.rows[0]);
+
+        // Remover a propriedade "foto" da resposta
+        // Ajustar o formato da data de nascimento
+        const dataNascimento = new Date(result.rows[0].data_nascimento);
+        const dataNascimentoFormatada = dataNascimento.toLocaleDateString('pt-BR'); // Altere para o formato desejado
+
+        res.json({
+            aluno_id: result.rows[0].aluno_id,
+            nome: result.rows[0].nome,
+            endereco: result.rows[0].endereco,
+            telefone: result.rows[0].telefone,
+            email: result.rows[0].email,
+            senha: result.rows[0].senha,
+            data_nascimento: dataNascimentoFormatada,
+        });
     } catch (error) {
         console.error(error);
-        res.status(500).send('Erro interno no servidor');
+        res.status(500).json({ error: error.message }); // Enviar detalhes do erro como resposta
     }
 });
 
-// Rota para obter todos os alunos
+
+// Rota para listar alunos
 app.get('/alunos', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM alunos');
-        res.json(result.rows);
+        
+        // Ajustar o formato da data de nascimento para cada aluno
+        const alunosFormatados = result.rows.map(aluno => {
+            const dataNascimento = new Date(aluno.data_nascimento);
+            return {
+                aluno_id: aluno.aluno_id,
+                nome: aluno.nome,
+                endereco: aluno.endereco,
+                telefone: aluno.telefone,
+                email: aluno.email,
+                senha: aluno.senha,
+                data_nascimento: dataNascimento.toLocaleDateString('pt-BR'), // Altere para o formato desejado
+            };
+        });
+
+        res.json(alunosFormatados);
     } catch (error) {
         console.error(error);
-        res.status(500).send('Erro interno no servidor');
+        res.status(500).json({ error: error.message }); // Enviar detalhes do erro como resposta
     }
 });
 
-// Rota para obter um aluno por ID
+
+// Rota para mostrar um aluno por ID
 app.get('/alunos/:id', async (req, res) => {
     try {
         const alunoId = req.params.id;
@@ -78,7 +119,7 @@ app.put('/alunos/:id', async (req, res) => {
     }
 });
 
-// Rota para apagar um aluno
+// Rota para deletar um aluno cadastrado
 app.delete('/alunos/:id', async (req, res) => {
     try {
         const alunoId = req.params.id;
@@ -95,6 +136,8 @@ app.delete('/alunos/:id', async (req, res) => {
     }
 });
 
+/////////////////////////////////////////////////////////////////////
+
 // Rota para cadastrar professor
 app.post('/professores', async (req, res) => {
     try {
@@ -110,7 +153,7 @@ app.post('/professores', async (req, res) => {
     }
 });
 
-// Rota para obter todos os professores
+// Rota para mostrar todos os professores
 app.get('/professores', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM professores');
@@ -121,7 +164,7 @@ app.get('/professores', async (req, res) => {
     }
 });
 
-// Rota para obter um professor por ID
+// Rota para mostrar um professor por ID
 app.get('/professores/:id', async (req, res) => {
     try {
         const professorId = req.params.id;
@@ -159,7 +202,7 @@ app.put('/professores/:id', async (req, res) => {
     }
 });
 
-// Rota para apagar um professor
+// Rota para deletar um professor cadastrado
 app.delete('/professores/:id', async (req, res) => {
     try {
         const professorId = req.params.id;
@@ -176,7 +219,7 @@ app.delete('/professores/:id', async (req, res) => {
     }
 });
 
-// ...
+/////////////////////////////////////////////////////////////////////
 
 // Rota para cadastrar turma
 app.post('/turmas', async (req, res) => {
@@ -193,7 +236,7 @@ app.post('/turmas', async (req, res) => {
     }
 });
 
-// Rota para obter todas as turmas
+// Rota para mostrar todas as turmas
 app.get('/turmas', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM turmas');
@@ -204,7 +247,7 @@ app.get('/turmas', async (req, res) => {
     }
 });
 
-// Rota para obter uma turma por ID
+// Rota para mostrar uma turma por ID
 app.get('/turmas/:id', async (req, res) => {
     try {
         const turmaId = req.params.id;
@@ -242,7 +285,7 @@ app.put('/turmas/:id', async (req, res) => {
     }
 });
 
-// Rota para excluir uma turma
+// Rota para deletar uma turma cadastrada
 app.delete('/turmas/:id', async (req, res) => {
     try {
         const turmaId = req.params.id;
@@ -258,6 +301,8 @@ app.delete('/turmas/:id', async (req, res) => {
         res.status(500).send('Erro interno no servidor');
     }
 });
+
+/////////////////////////////////////////////////////////////////////
 
 // Rota para cadastrar disciplina
 app.post('/disciplinas', async (req, res) => {
@@ -275,7 +320,7 @@ app.post('/disciplinas', async (req, res) => {
 });
 
 
-// Rota para obter todas as disciplinas
+// Rota para mostrar todas as disciplinas
 app.get('/disciplinas', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM disciplinas');
@@ -286,14 +331,39 @@ app.get('/disciplinas', async (req, res) => {
     }
 });
 
-// Rota para cadastrar nota de um aluno em uma disciplina
-app.post('/notas', async (req, res) => {
+/////////////////////////////////////////////////////////////////////
+
+// Rota para matricular um aluno em uma disciplina
+app.post('/matriculas', async (req, res) => {
     try {
-        const { aluno_id, disciplina_id, nota } = req.body;
-        const result = await pool.query(
-            'INSERT INTO notas (aluno_id, disciplina_id, nota) VALUES ($1, $2, $3) RETURNING *',
-            [aluno_id, disciplina_id, nota]
+        const { aluno_id, disciplina_id } = req.body;
+
+        // Verifica se o aluno e a disciplina existem antes de realizar a matrícula
+        const alunoExists = await pool.query('SELECT * FROM alunos WHERE aluno_id = $1', [aluno_id]);
+        const disciplinaExists = await pool.query('SELECT * FROM disciplinas WHERE disciplina_id = $1', [disciplina_id]);
+
+        if (alunoExists.rows.length === 0 || disciplinaExists.rows.length === 0) {
+            res.status(404).send('Aluno ou disciplina não encontrados');
+            return;
+        }
+
+        // Verifica se o aluno já está matriculado na disciplina
+        const matriculaExists = await pool.query(
+            'SELECT * FROM matriculas WHERE aluno_id = $1 AND disciplina_id = $2',
+            [aluno_id, disciplina_id]
         );
+
+        if (matriculaExists.rows.length > 0) {
+            res.status(400).send('Aluno já matriculado nesta disciplina');
+            return;
+        }
+
+        // Realiza a matrícula
+        const result = await pool.query(
+            'INSERT INTO matriculas (aluno_id, disciplina_id) VALUES ($1, $2) RETURNING *',
+            [aluno_id, disciplina_id]
+        );
+
         res.json(result.rows[0]);
     } catch (error) {
         console.error(error);
@@ -301,7 +371,121 @@ app.post('/notas', async (req, res) => {
     }
 });
 
-// Rota para obter todas as notas de um aluno
+// Rota para mostrar a matrícula de um aluno em uma disciplina
+app.get('/matriculas/:aluno_id/:disciplina_id', async (req, res) => {
+    try {
+        const alunoId = req.params.aluno_id;
+        const disciplinaId = req.params.disciplina_id;
+
+        const result = await pool.query(
+            'SELECT * FROM matriculas WHERE aluno_id = $1 AND disciplina_id = $2',
+            [alunoId, disciplinaId]
+        );
+
+        if (result.rows.length === 0) {
+            res.status(404).send('Matrícula não encontrada para o aluno nesta disciplina');
+        } else {
+            res.json(result.rows[0]);
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
+
+// Rota para atualizar a matrícula de um aluno em uma disciplina
+app.put('/matriculas/:aluno_id/:disciplina_id', async (req, res) => {
+    try {
+        const alunoId = req.params.aluno_id;
+        const disciplinaId = req.params.disciplina_id;
+
+        // Verifica se a matrícula existe antes de realizar a atualização
+        const matriculaExists = await pool.query(
+            'SELECT * FROM matriculas WHERE aluno_id = $1 AND disciplina_id = $2',
+            [alunoId, disciplinaId]
+        );
+
+        if (matriculaExists.rows.length === 0) {
+            res.status(404).send('Matrícula não encontrada para o aluno nesta disciplina');
+            return;
+        }
+
+        // Realiza a atualização na matrícula
+        const { novo_aluno_id, nova_disciplina_id } = req.body;
+        const result = await pool.query(
+            'UPDATE matriculas SET aluno_id = $1, disciplina_id = $2 WHERE aluno_id = $3 AND disciplina_id = $4 RETURNING *',
+            [novo_aluno_id, nova_disciplina_id, alunoId, disciplinaId]
+        );
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
+
+// Rota para deletar a matrícula de um aluno em uma disciplina
+app.delete('/matriculas/:aluno_id/:disciplina_id', async (req, res) => {
+    try {
+        const alunoId = req.params.aluno_id;
+        const disciplinaId = req.params.disciplina_id;
+
+        // Verifica se a matrícula existe antes de realizar a exclusão
+        const matriculaExists = await pool.query(
+            'SELECT * FROM matriculas WHERE aluno_id = $1 AND disciplina_id = $2',
+            [alunoId, disciplinaId]
+        );
+
+        if (matriculaExists.rows.length === 0) {
+            res.status(404).send('Matrícula não encontrada para o aluno nesta disciplina');
+            return;
+        }
+
+        // Realiza a exclusão da matrícula
+        const result = await pool.query(
+            'DELETE FROM matriculas WHERE aluno_id = $1 AND disciplina_id = $2 RETURNING *',
+            [alunoId, disciplinaId]
+        );
+
+        res.json({ mensagem: 'Matrícula deletada com sucesso' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
+
+/////////////////////////////////////////////////////////////////////
+
+// Rota para cadastrar nota de um aluno em uma disciplina
+app.post('/notas', async (req, res) => {
+    try {
+        const { aluno_id, disciplina_id, nota } = req.body;
+
+        // Verifica se o aluno está matriculado na disciplina
+        const matriculaExists = await pool.query(
+            'SELECT * FROM matriculas WHERE aluno_id = $1 AND disciplina_id = $2',
+            [aluno_id, disciplina_id]
+        );
+
+        if (matriculaExists.rows.length === 0) {
+            res.status(400).send('Aluno não está matriculado nesta disciplina');
+            return;
+        }
+
+        // Realiza o cadastro da nota
+        const result = await pool.query(
+            'INSERT INTO notas (aluno_id, disciplina_id, nota) VALUES ($1, $2, $3) RETURNING *',
+            [aluno_id, disciplina_id, nota]
+        );
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
+
+// Rota para mostrar todas as notas de um aluno
 app.get('/notas/:aluno_id', async (req, res) => {
     try {
         const alunoId = req.params.aluno_id;
@@ -312,6 +496,38 @@ app.get('/notas/:aluno_id', async (req, res) => {
         res.status(500).send('Erro interno no servidor');
     }
 });
+
+// Rota para mostrar as notas de uma disciplina específica de um aluno
+app.get('/notas/:aluno_id/:disciplina_id', async (req, res) => {
+    try {
+        const alunoId = req.params.aluno_id;
+        const disciplinaId = req.params.disciplina_id;
+
+        // Verifica se o aluno está matriculado na disciplina
+        const matriculaExists = await pool.query(
+            'SELECT * FROM matriculas WHERE aluno_id = $1 AND disciplina_id = $2',
+            [alunoId, disciplinaId]
+        );
+
+        if (matriculaExists.rows.length === 0) {
+            res.status(400).send('Aluno não está matriculado nesta disciplina');
+            return;
+        }
+
+        // Obtém as notas da disciplina específica
+        const result = await pool.query(
+            'SELECT * FROM notas WHERE aluno_id = $1 AND disciplina_id = $2',
+            [alunoId, disciplinaId]
+        );
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
+
+/////////////////////////////////////////////////////////////////////
 
 // Rota para calcular a média de um aluno em todas as disciplinas
 app.get('/media/:aluno_id', async (req, res) => {
@@ -373,6 +589,179 @@ app.get('/media/:aluno_id/:disciplina_id', async (req, res) => {
     }
 });
 
+/////////////////////////////////////////////////////////////////////
+
+// Rota para registrar presença ou falta de um aluno em uma aula
+app.post('/presenca', async (req, res) => {
+    try {
+        const { aluno_id, aula_id, presenca, justificativa } = req.body;
+        
+        // Verifica se o aluno e a aula existem antes de registrar a presença
+        const alunoExists = await pool.query('SELECT * FROM alunos WHERE aluno_id = $1', [aluno_id]);
+        const aulaExists = await pool.query('SELECT * FROM aulas WHERE aula_id = $1', [aula_id]);
+
+        if (alunoExists.rows.length === 0 || aulaExists.rows.length === 0) {
+            res.status(404).send('Aluno ou aula não encontrados');
+            return;
+        }
+
+        const result = await pool.query(
+            'INSERT INTO presencas (aluno_id, aula_id, presenca, justificativa) VALUES ($1, $2, $3, $4) RETURNING *',
+            [aluno_id, aula_id, presenca, justificativa]
+        );
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
+
+// Rota para mostrar a presença e justificativa de um aluno em uma aula
+app.get('/presenca/:aluno_id/:aula_id', async (req, res) => {
+    try {
+        const alunoId = req.params.aluno_id;
+        const aulaId = req.params.aula_id;
+
+        const result = await pool.query(
+            'SELECT * FROM presencas WHERE aluno_id = $1 AND aula_id = $2',
+            [alunoId, aulaId]
+        );
+
+        if (result.rows.length === 0) {
+            res.status(404).send('Presença não encontrada para o aluno nesta aula');
+        } else {
+            res.json(result.rows[0]);
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
+
+/////////////////////////////////////////////////////////////////////
+
+// Rota para mostrar o histórico escolar de um aluno
+app.get('/historico-escolar/:aluno_id', async (req, res) => {
+    try {
+        const alunoId = req.params.aluno_id;
+
+        // mostrar anos distintos em que o aluno teve notas
+        const anosResult = await pool.query(
+            'SELECT DISTINCT EXTRACT(YEAR FROM data_matricula) as ano FROM matriculas WHERE aluno_id = $1',
+            [alunoId]
+        );
+
+        const historicoEscolar = [];
+
+        for (const anoObj of anosResult.rows) {
+            const ano = anoObj.ano;
+
+            // Obter notas do aluno para o ano específico
+            const notasResult = await pool.query(
+                'SELECT disciplinas.disciplina_id, AVG(nota) as media FROM notas ' +
+                'JOIN matriculas ON notas.aluno_id = matriculas.aluno_id ' +
+                'JOIN disciplinas ON notas.disciplina_id = disciplinas.disciplina_id ' +
+                'WHERE notas.aluno_id = $1 AND EXTRACT(YEAR FROM matriculas.data_matricula) = $2 ' +
+                'GROUP BY disciplinas.disciplina_id',
+                [alunoId, ano]
+            );
+
+            historicoEscolar.push({
+                ano: ano,
+                notas: notasResult.rows,
+            });
+        }
+
+        res.json(historicoEscolar);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
+
+/////////////////////////////////////////////////////////////////////
+
+// Rota para cadastrar um evento
+app.post('/eventos', async (req, res) => {
+    try {
+        const { titulo, descricao, data_inicio, data_fim } = req.body;
+        const result = await pool.query(
+            'INSERT INTO eventos (titulo, descricao, data_inicio, data_fim) VALUES ($1, $2, $3, $4) RETURNING *',
+            [titulo, descricao, data_inicio, data_fim]
+        );
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
+
+// Rota para mostrar todos os eventos
+app.get('/eventos', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM eventos');
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
+
+// Rota para mostrar um evento por ID
+app.get('/eventos/:id', async (req, res) => {
+    try {
+        const eventoId = req.params.id;
+        const result = await pool.query('SELECT * FROM eventos WHERE evento_id = $1', [eventoId]);
+
+        if (result.rows.length === 0) {
+            res.status(404).send('Evento não encontrado');
+        } else {
+            res.json(result.rows[0]);
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
+
+// Rota para atualizar um evento existente
+app.put('/eventos/:id', async (req, res) => {
+    try {
+        const eventoId = req.params.id;
+        const { titulo, descricao, data_inicio, data_fim } = req.body;
+        const result = await pool.query(
+            'UPDATE eventos SET titulo = $1, descricao = $2, data_inicio = $3, data_fim = $4 WHERE evento_id = $5 RETURNING *',
+            [titulo, descricao, data_inicio, data_fim, eventoId]
+        );
+
+        if (result.rows.length === 0) {
+            res.status(404).send('Evento não encontrado');
+        } else {
+            res.json(result.rows[0]);
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
+
+// Rota para apagar um evento
+app.delete('/eventos/:id', async (req, res) => {
+    try {
+        const eventoId = req.params.id;
+        const result = await pool.query('DELETE FROM eventos WHERE evento_id = $1 RETURNING *', [eventoId]);
+
+        if (result.rows.length === 0) {
+            res.status(404).send('Evento não encontrado');
+        } else {
+            res.json({ mensagem: 'Evento apagado com sucesso' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Erro interno no servidor');
+    }
+});
 
 app.listen(port, () => {
     console.log(`Servidor rodando em http://localhost:${port}`);
