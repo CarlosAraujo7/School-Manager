@@ -8,3 +8,5 @@ Coloquem os dados que vocês cadastraram o seu postgres.
 Provavelmente podem deixar do jeito que está e só mudar a parte de password.
 A senha que está lá no password é 0701, que é a senha do meu postgres.
 Vocês mudam para a senha que cadastraram no postgres de vocês.
+
+Só tô testando um negócio.
